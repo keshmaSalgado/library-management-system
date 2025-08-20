@@ -1,3 +1,2 @@
-id,name,available
-1,game of thrones,True
-2,The Great Gatsby,True
+bookid,title,author,category,available
+1,game of thrones,George R R martin,Fun,True

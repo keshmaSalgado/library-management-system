@@ -1,3 +1,2 @@
-id,name,age,NationalId
-1,keshma,21,200406210506
-2,mahinda,76,200306210506
+id,firstName,lastName,contact,dateOfBirth,NationalId
+1,keshma,salgado,0713981764,2004/03/02,200406210506

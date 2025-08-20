@@ -16,14 +16,16 @@ if os.path.exists(memberfile):
         for row in reader:
             member = {
                 "id": int(row["id"]),
-                "name": row["name"],
-                "age": int(row["age"]),
+                "firstName": row["firstName"],
+                "lastName": row["lastName"],
+                "contact": row["contact"],
+                "dateOfBirth": row["dateOfBirth"],
                 "NationalId": row["NationalId"]
             }
             members.append(member)  # ✅ fixed
 else:
     with open(memberfile, mode='w', newline='') as csvfile:
-        fieldnames = ['id', 'name', 'age', 'NationalId']
+        fieldnames = ['id', 'firstName', 'lastName', 'contact', 'dateOfBirth', 'NationalId']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
     print(f"File '{memberfile}' created with headers.")
@@ -34,14 +36,16 @@ if os.path.exists(booksfile):
         reader = csv.DictReader(csvfile)
         for row in reader:
             book = {
-                "id": int(row["id"]),
-                "name": row["name"],
-                "available": bool(row["available"]),
+                "bookid": int(row["bookid"]),
+                "title": row["title"],
+                "author": row["author"],
+                "category": row["category"],
+                "available": row["available"],
             }
             books.append(book)  # ✅ fixed
 else:
     with open(booksfile, mode='w', newline='') as csvfile:
-        fieldnames = ['id', 'name', 'available']
+        fieldnames = ['bookid', 'title', 'author', 'category', 'available']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
     print(f"File '{booksfile}' created with headers.")
@@ -69,16 +73,63 @@ else:
 # ------------ Member Management Functions ------------
 #--------Add Detailed
 def addMembers():
-    nameID = int(input('Input the Id: '))
-    nameInput = input('Input the name: ')
-    nameAge = int(input('Input the age: '))
-    NationalId = input('Input the National Id: ')
-    members.append({"id": nameID, "name": nameInput, "age": nameAge, "NationalId": NationalId})
+    while True:
+        try:
+            memberID = int(input("Input the Id: "))
+            if memberID <= 0:
+                print("❌ Member ID must be a positive number.")
+                continue
+            # --- Check for duplicate ID ---
+            for member in members:
+                if member["id"] == memberID:
+                    print("❌ Member ID already exists. Please enter a different ID.")
+                    break
+            else:  # runs only if no duplicate found
+                break
+        except ValueError:
+            print("❌ Invalid input. Please enter a number.")
 
+    firstName = input('Input the First Name: ')
+    lastName = input('Input the Last Name: ')
+    contact = input('Input the Contact: ')
+    dateOfBirth = input('Input the Date of Birth (YYYY-MM-DD): ')
+    nationalId = input('Input the National Id: ')
+
+    members.append({
+        "id": memberID,
+        "firstName": firstName,
+        "lastName": lastName,
+        "contact": contact,
+        "dateOfBirth": dateOfBirth,
+        "NationalId": nationalId
+    })
+    
 def addBooks():
-    nameID = int(input('Input the Book Id: '))
-    nameInput = input('Input the Book name: ')
-    books.append({"id": nameID, "name": nameInput,"available": True})
+    while True:
+        try:
+            bookID = int(input("Input the Book Id: "))
+            if bookID <= 0:
+                print("❌ Book ID must be a positive number.")
+                continue
+            # --- Check if Book ID already exists ---
+            for book in books:
+                if book["bookid"] == bookID:
+                    print("❌ Book ID already exists. Please enter a different ID.")
+                    break
+            else:  # only runs if no duplicate found
+                break
+        except ValueError:
+            print("❌ Invalid input. Please enter a number.")
+    title = input('Input the Book Title: ')
+    author = input('Input the Author: ')
+    category = input('Input the Category: ')
+    books.append({
+        "bookid": bookID,
+        "title": title,
+        "author": author,
+        "category": category,
+        "available": True
+    })
 
 def addBorrowedBooks():
     bookID = int(input('Input the Book Id: '))
@@ -88,7 +139,7 @@ def addBorrowedBooks():
 
     # Check if book exists
     for book in books:
-        if book["id"] == bookID:
+        if book["bookid"] == bookID:
             if not book["available"]:
                 print("❌ This book is already borrowed.")
                 return
@@ -121,7 +172,7 @@ def returnBooks():
 
     # Find the book and mark available
     for book in books:
-        if book["id"] == bookID:
+        if book["bookid"] == bookID:
             book["available"] = True  # ✅ always set to available when returning
             break
 
@@ -131,21 +182,21 @@ def returnBooks():
     return True
 
 
-#--------Get All Detailed
+# ------------ Display Functions ------------
 def getAllDetailed():
     print("\n\nMembers Detailed")
     if not members:
         print("No members found.")
     else:
-        member_table = [[m["id"], m["name"], m["age"], m["NationalId"]] for m in members]
-        print(tabulate(member_table, headers=["ID", "Name", "Age", "National ID"], tablefmt="grid"))
+        member_table = [[m["id"], m["firstName"], m["lastName"], m["contact"], m["dateOfBirth"], m["NationalId"]] for m in members]
+        print(tabulate(member_table, headers=["ID", "First Name", "Last Name", "Contact", "DOB", "National ID"], tablefmt="grid"))
 
     print("\n\nBooks")
     if not books:
         print("No Books found.")
     else:
-        book_table = [[b["id"], b["name"], b["available"]] for b in books]
-        print(tabulate(book_table, headers=["ID", "Name", "Available"], tablefmt="grid"))
+        book_table = [[b["bookid"], b["title"], b["author"], b["category"], b["available"]] for b in books]
+        print(tabulate(book_table, headers=["Book ID", "Title", "Author", "Category", "Available"], tablefmt="grid"))
 
     print("\n\nBorrowed Detailed")
     if not borrowDetailed:
@@ -160,15 +211,15 @@ def searchMemberById():
     member_id = int(input('Input the id: '))
     for member in members:
         if member["id"] == member_id:
-            print(f"id:{member['id']} name:{member['name']} age:{member['age']} NationalId:{member['NationalId']}")
+            print(f"id:{member['id']} First Name:{member['firstName']} Last Name:{member['lastName']} Contact:{member['contact']} DOB:{member['dateOfBirth']} NationalId:{member['NationalId']}")
             return
     print("No member found!!!!")
 
 def searchBookByID():
     book_id = int(input('Input the id: '))
     for book in books:
-        if book["id"] == book_id:
-            print(f"id:{book['id']} name:{book['name']} available:{book['available']}")
+        if book["bookid"] == book_id:
+            print(f"id:{book['bookid']} title:{book['title']} author:{book['author']} category:{book['category']} available:{book['available']}")
             return
     print("No book found!!!!")
 
@@ -202,7 +253,7 @@ def updateMemberById():
 def updateBookById():
     id_to_find = int(input('Enter the id of the book to update: '))
     for book in books:
-        if book["id"] == id_to_find:
+        if book["bookid"] == id_to_find:
             field = input('Enter the field to update (name, available): ')
             if field in book:
                 new_value = input(f'Enter new value for {field}: ')
@@ -220,7 +271,7 @@ def updateBookById():
 def updateBorrowedDetailedById():
     id_to_find = int(input('Enter the id of the borrowed record to update: '))
     for borrow in borrowDetailed:
-        if borrow["id"] == id_to_find:
+        if borrow["bookid"] == id_to_find:
             field = input('Enter the field to update (bookid, memberid, borrowdate, returndate): ')
             if field in borrow:
                 new_value = input(f'Enter new value for {field}: ')
@@ -261,7 +312,7 @@ def remove_member_by_id():
 def remove_book_by_id():
     book_id = int(input('Input the id: '))
     for i, book in enumerate(books):
-        if book["id"] == book_id:
+        if book["bookid"] == book_id:
             del books[i]
             print(f"Book with ID {book_id} has been removed.")
             return True
@@ -271,7 +322,7 @@ def remove_book_by_id():
 def remove_borrowdetailed_by_id():
     borrow_id = int(input('Input the id: '))
     for i, borrow in enumerate(borrowDetailed):
-        if borrow["id"] == borrow_id:
+        if borrow["bookid"] == borrow_id:
             del borrowDetailed[i]
             print(f"Borrow record with ID {borrow_id} has been removed.")
             return True
@@ -281,15 +332,15 @@ def remove_borrowdetailed_by_id():
 #--------Save Detailed
 def save_members_to_csv(memberfile="members.csv"):
     with open(memberfile, 'w', newline='') as csvfile:
-        fieldnames = ['id', 'name', 'age', 'NationalId']
+        fieldnames = ['id', 'firstName', 'lastName', 'contact', 'dateOfBirth', 'NationalId']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
         for member in members:
             writer.writerow(member)
-
+            
 def save_books_to_csv(bookfile="books.csv"):
     with open(bookfile, 'w', newline='') as csvfile:
-        fieldnames = ['id', 'name', 'available']
+        fieldnames = ['bookid', 'title', 'author', 'category', 'available']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
         for book in books:
@@ -302,7 +353,6 @@ def save_borrowdetailed_to_csv(borrowfile="borrowdetailed.csv"):
         writer.writeheader()
         for borrow in borrowDetailed:
             writer.writerow(borrow)
-
 
 # ------------ Main Menu ------------
 def main():
