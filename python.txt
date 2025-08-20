@@ -1,0 +1,131 @@
+import csv
+import os
+
+
+students = []
+filename = "students.csv"
+if os.path.exists(filename):
+    # File exists, read data
+    with open(filename, newline='') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            student = {
+                "id": row["id"],
+                "name": row["name"],
+                "age": int(row["age"]),
+                "marks": int(row["marks"])
+            }
+            students.append(student)
+else:
+    # File doesn't exist, create with headers only
+    with open(filename, mode='w', newline='') as csvfile:
+        fieldnames = ['id', 'name', 'age', 'marks']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+    print(f"File '{filename}' created with headers.")
+    
+def addStudent():
+    nameID = int(input('Input the Id: '))
+    nameInput = input('Input the name: ')
+    nameAge = int(input('Input the age: '))
+    nameMarks = int(input('Input the Marks: '))
+    students.append({"id":nameID,"name": nameInput, "age": nameAge, "marks": nameMarks})
+
+
+    
+def getallstudentdeatiled():
+    for student in students:
+        print(f"id:{student['id']} name: {student['name']} age: {student['age']} marks: {student['marks']}")
+
+
+def searchStudentByName():
+    student_name = input('Input the name: ')
+    for student in students:
+        if student["name"] == student_name:
+            return print(f"id:{student['id']} name: {student['name']} age: {student['age']} marks: {student['marks']}")
+        else:
+            return print("No student found!!!!")
+    
+    
+    
+def deleteStudentByName():
+    student_name = input('Input the name: ')
+    for student in students:
+        if student["name"] == student_name:
+            return student
+        else:
+            return print("No student found!!!!")
+
+def updateStudentByName():
+    name_to_find = input('Enter the name of the student to update: ')
+    for student in students:
+        if student["name"] == name_to_find:
+            field = input('Enter the field to update (name, age, marks): ')
+            if field in student:
+                new_value = input(f'Enter new value for {field}: ')
+                # Convert to int if updating age or marks
+                if field in ["age", "marks"]:
+                    new_value = int(new_value)
+                student[field] = new_value
+                print("Student record updated successfully.")
+                return True
+            else:
+                print("Invalid field.")
+                return False
+    print("Student not found.")
+    return False
+
+def remove_student_by_id():
+    student_id = int(input('Input the id: '))
+    for i, student in enumerate(students):
+        if student["id"] == student_id:
+            del students[i]
+            print(f"Student with ID {student_id} has been removed.")
+            return True
+    print("Student not found.")
+    return False
+def save_students_to_csv(filename='students.csv'):
+    with open(filename, 'w', newline='') as csvfile:
+        fieldnames = ['id', 'name', 'age', 'marks']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        for student in students:
+            writer.writerow(student)
+
+def main():
+     while True:
+        print("\n--- Student Management Menu ---")
+        print("1. Add student")
+        print("2. Get all students")
+        print("3. Search student by name")
+        print("4. Update student")
+        print("5. Delete student")
+        print("6. Save and Exit")
+        
+        try:
+            choice = int(input('Enter your choice (1-6): '))
+        except ValueError:
+            print("Please enter a valid number.")
+            continue
+
+        if choice == 1:
+            addStudent()
+        elif choice == 2:
+            getallstudentdeatiled()
+        elif choice == 3:
+            searchStudentByName()
+        elif choice == 4:
+            updateStudentByName()
+        elif choice == 5:
+            deleteStudentByName()
+        elif choice == 6:
+            save_students_to_csv()
+            print("Thank you! Exiting...")
+            break
+        else:
+            print("Invalid choice. Please enter a number between 1 and 6.")
+   
+   
+
+main()
+
