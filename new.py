@@ -7,7 +7,7 @@ books = []
 borrowDetailed = []
 memberfile = "members.csv"
 booksfile = "books.csv"
-borrowfile = "borrow.csv"
+borrowfile = "borrowdetailed.csv"
 
 # Load members
 if os.path.exists(memberfile):
@@ -78,22 +78,58 @@ def addMembers():
 def addBooks():
     nameID = int(input('Input the Book Id: '))
     nameInput = input('Input the Book name: ')
-    bookAvailable = input("Is boo available(yes/no): ")
-    books.append({"id": nameID, "name": nameInput,"available": bookAvailable})
+    books.append({"id": nameID, "name": nameInput,"available": True})
 
 def addBorrowedBooks():
     bookID = int(input('Input the Book Id: '))
     memberID = int(input('Input the Member Id: '))
     borrowDate = input('Input the Borrow Date (YYYY-MM-DD): ')
     returnDate = input('Input the Return Date (YYYY-MM-DD): ')
-    borrowDetailed.append({"bookid": bookID, "memberid": memberID, "borrowdate": borrowDate, "returndate": returnDate})
 
-def addMembers():
-    nameID = int(input('Input the Id: '))
-    nameInput = input('Input the name: ')
-    nameAge = int(input('Input the age: '))
-    NationalId = input('Input the National Id: ')
-    members.append({"id": nameID, "name": nameInput, "age": nameAge, "NationalId": NationalId})
+    # Check if book exists
+    for book in books:
+        if book["id"] == bookID:
+            if not book["available"]:
+                print("❌ This book is already borrowed.")
+                return
+            # Mark as borrowed
+            book["available"] = False
+            borrowDetailed.append({
+                "bookid": bookID,
+                "memberid": memberID,
+                "borrowdate": borrowDate,
+                "returndate": returnDate
+            })
+            print("✅ Borrow record added. Book marked unavailable.")
+            return
+
+    print("❌ Book ID not found.")
+    
+def returnBooks():
+    bookID = int(input('Input the Book Id: '))
+
+    # Find borrow record
+    borrow_found = None
+    for borrow in borrowDetailed:
+        if borrow["bookid"] == bookID:
+            borrow_found = borrow
+            break
+
+    if borrow_found is None:
+        print("❌ No borrow record found for this Book ID.")
+        return False
+
+    # Find the book and mark available
+    for book in books:
+        if book["id"] == bookID:
+            book["available"] = True  # ✅ always set to available when returning
+            break
+
+    # Remove borrow record
+    borrowDetailed.remove(borrow_found)
+    print(f"✅ Book ID {bookID} has been returned. Borrow record removed, book marked available.")
+    return True
+
 
 #--------Get All Detailed
 def getAllDetailed():
@@ -272,7 +308,7 @@ def save_borrowdetailed_to_csv(borrowfile="borrowdetailed.csv"):
 def main():
     while True:
         print("\n--- Member Management Menu ---")
-        print("1. Add member/books/borrowed detailed")
+        print("1. Add member/books/borrowed detailed/Returned book")
         print("2. Get all details")
         print("3. Search member/books/borrowed detailed by ID")
         print("4. Update member/books/borrowed detailed")
@@ -288,8 +324,9 @@ def main():
             print("1. Add member")
             print("2. Add Books")
             print("3. Add BorrowedDetailed")
+            print("4. Add Return book")
             try:
-                choice = int(input('Enter your choice (1-3): '))
+                choice = int(input('Enter your choice (1-4): '))
             except ValueError:
                 print("Please enter a valid number.")
                 continue
@@ -298,7 +335,11 @@ def main():
             elif choice == 2:
                 addBooks()
             elif choice == 3:
-                addBorrowedBooks()            
+                addBorrowedBooks()
+            elif choice == 4:
+                returnBooks()
+            else:
+                print("❌ Invalid choice.")         
         elif choice == 2:
             getAllDetailed()
         elif choice == 3:
@@ -316,6 +357,8 @@ def main():
                 searchBookByID()
             elif choice == 3:
                 searchBorrowDetailedById()
+            else:
+                print("❌ Invalid choice.")
         elif choice == 4:
             print("1. Update member")
             print("2. Update Books")
@@ -331,6 +374,8 @@ def main():
                 updateBookById()
             elif choice == 3:
                 updateBorrowedDetailedById()
+            else:
+                print("❌ Invalid choice.")
         elif choice == 5:
             print("1. Delete member")
             print("2. Delete Books")
@@ -346,6 +391,8 @@ def main():
                 remove_book_by_id()
             elif choice == 3:
                 remove_borrowdetailed_by_id()
+            else:
+                print("❌ Invalid choice.")
         elif choice == 6:
             save_members_to_csv()
             save_books_to_csv()
@@ -356,4 +403,25 @@ def main():
             print("Invalid choice. Please enter a number between 1 and 6.")
 
 
+username = 'admin1234'
+password = "1234"
+
+
+# while True:
+#     enterName = input("Enter username: ")
+#     enterPassword = input("Enter password: ")
+
+#     if enterName == username and enterPassword == password:
+        
+#         break
+#     else:
+#         print("Username or password is incorrect")
+
+        
 main()
+    
+
+    
+    
+    
+
