@@ -371,10 +371,10 @@ def main():
             print("Please enter a valid number.")
             continue
         if choice == 1:
-            print("1. Add member")
-            print("2. Add Books")
-            print("3. Add BorrowedDetailed")
-            print("4. Add Return book")
+            print("    1. Add member")
+            print("    2. Add Books")
+            print("    3. Add BorrowedDetailed")
+            print("    4. Add Return book")
             try:
                 choice = int(input('Enter your choice (1-4): '))
             except ValueError:
@@ -393,9 +393,9 @@ def main():
         elif choice == 2:
             getAllDetailed()
         elif choice == 3:
-            print("1. Search member")
-            print("2. Search Books")
-            print("3. Search BorrowedDetailed")
+            print("    1. Search member")
+            print("    2. Search Books")
+            print("    3. Search BorrowedDetailed")
             try:
                 choice = int(input('Enter your choice (1-3): '))
             except ValueError:
@@ -410,9 +410,9 @@ def main():
             else:
                 print("❌ Invalid choice.")
         elif choice == 4:
-            print("1. Update member")
-            print("2. Update Books")
-            print("3. Update BorrowedDetailed")
+            print("    1. Update member")
+            print("    2. Update Books")
+            print("    3. Update BorrowedDetailed")
             try:
                 choice = int(input('Enter your choice (1-3): '))
             except ValueError:
@@ -427,9 +427,9 @@ def main():
             else:
                 print("❌ Invalid choice.")
         elif choice == 5:
-            print("1. Delete member")
-            print("2. Delete Books")
-            print("3. Delete BorrowedDetailed")
+            print("    1. Delete member")
+            print("    2. Delete Books")
+            print("    3. Delete BorrowedDetailed")
             try:
                 choice = int(input('Enter your choice (1-3): '))
             except ValueError:
