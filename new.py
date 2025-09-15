@@ -1,474 +1,603 @@
 import csv
 import os
 from tabulate import tabulate
+from datetime import datetime
 
-members = []
-books = []
-borrowDetailed = []
-memberfile = "members.csv"
-booksfile = "books.csv"
-borrowfile = "borrowdetailed.csv"
 
-# Load members
-if os.path.exists(memberfile):
-    with open(memberfile, newline='') as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            member = {
-                "id": int(row["id"]),
-                "firstName": row["firstName"],
-                "lastName": row["lastName"],
-                "contact": row["contact"],
-                "dateOfBirth": row["dateOfBirth"],
-                "NationalId": row["NationalId"]
-            }
-            members.append(member)  # ✅ fixed
-else:
-    with open(memberfile, mode='w', newline='') as csvfile:
-        fieldnames = ['id', 'firstName', 'lastName', 'contact', 'dateOfBirth', 'NationalId']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+memberfile = os.path.join(BASE_DIR, "members.csv")
+booksfile = os.path.join(BASE_DIR, "books.csv")
+borrowfile = os.path.join(BASE_DIR, "borrowdetailed.csv")
+
+# ---------- CSV Initialization ----------
+def init_csv(file, headers):
+    if not os.path.exists(file):
+        with open(file, mode='w', newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=headers)
+            writer.writeheader()
+        print(f"File '{file}' created with headers.")
+
+init_csv(memberfile, ['id', 'firstName', 'lastName', 'contact', 'dateOfBirth', 'NationalId'])
+init_csv(booksfile, ['bookid', 'title', 'author', 'category', 'available'])
+init_csv(borrowfile, ['bookid', 'memberid', 'borrowdate', 'returndate'])
+
+
+# ---------- CSV Utility Functions ----------
+def read_csv(file):
+    with open(file, newline='') as f:
+        return list(csv.DictReader(f))
+
+def write_csv(file, data, fieldnames):
+    with open(file, 'w', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
-    print(f"File '{memberfile}' created with headers.")
-
-# Load books
-if os.path.exists(booksfile):
-    with open(booksfile, newline='') as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            book = {
-                "bookid": int(row["bookid"]),
-                "title": row["title"],
-                "author": row["author"],
-                "category": row["category"],
-                "available": row["available"],
-            }
-            books.append(book)  # ✅ fixed
-else:
-    with open(booksfile, mode='w', newline='') as csvfile:
-        fieldnames = ['bookid', 'title', 'author', 'category', 'available']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
-    print(f"File '{booksfile}' created with headers.")
-
-# Load borrow records
-if os.path.exists(borrowfile):
-    with open(borrowfile, newline='') as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            borrow = {
-                "bookid": int(row["bookid"]),
-                "memberid": int(row["memberid"]),
-                "borrowdate": row["borrowdate"],
-                "returndate": row["returndate"]
-            }
-            borrowDetailed.append(borrow)
-else:
-    with open(borrowfile, mode='w', newline='') as csvfile:
-        fieldnames = ['bookid', 'memberid', 'borrowdate', 'returndate']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
-    print(f"File '{borrowfile}' created with headers.")
-
-
-# ------------ Member Management Functions ------------
-#--------Add Detailed
+        writer.writerows(data)
+        
+def append_csv(file, row):
+    with open(file, 'a', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=row.keys())
+        writer.writerow(row)
+        
+# ---------- Member Functions ----------
 def addMembers():
+    # Read members once
+    members = read_csv(memberfile)
+
+
     while True:
         try:
             memberID = int(input("Input the Id: "))
             if memberID <= 0:
-                print("❌ Member ID must be a positive number.")
+                print("❌ Member ID must not be negative or zero.")
                 continue
-            # --- Check for duplicate ID ---
-            for member in members:
-                if member["id"] == memberID:
-                    print("❌ Member ID already exists. Please enter a different ID.")
-                    break
-            else:  # runs only if no duplicate found
-                break
+            if any(int(row["id"]) == memberID for row in members):
+                print("❌ Member ID already exists.")
+                continue
+            break
         except ValueError:
-            print("❌ Invalid input. Please enter a number.")
+            print("❌ Invalid input.Member ID must be a intiger")
+    
+    firstName = input('First Name: ')
+    lastName = input('Last Name: ')
+    contact = input('Contact: ')
+    while True:
+        dob_input = input("DOB (YYYY-MM-DD): ")
+        try:
+            dateOfBirth = datetime.strptime(dob_input, "%Y-%m-%d").date()
+            break
+        except ValueError:
+            print("❌ Invalid date format. Please use YYYY-MM-DD.")
+    nationalId = input('National ID: ')
 
-    firstName = input('Input the First Name: ')
-    lastName = input('Input the Last Name: ')
-    contact = input('Input the Contact: ')
-    dateOfBirth = input('Input the Date of Birth (YYYY-MM-DD): ')
-    nationalId = input('Input the National Id: ')
-
-    members.append({
+    new_member = {
         "id": memberID,
         "firstName": firstName,
         "lastName": lastName,
         "contact": contact,
-        "dateOfBirth": dateOfBirth,
+        "dateOfBirth": dateOfBirth.strftime("%Y-%m-%d"),  # always string
         "NationalId": nationalId
-    })
-    
+    }
+
+    append_csv(memberfile, new_member)
+
+    print(f"✅ Member {firstName} {lastName} added successfully!")
+
+# ---------- Book Functions ----------
 def addBooks():
+    books = read_csv(booksfile)
+
     while True:
         try:
-            bookID = int(input("Input the Book Id: "))
+            bookID = int(input("Book Id: "))
             if bookID <= 0:
-                print("❌ Book ID must be a positive number.")
+                print("❌ Must be positive.")
                 continue
-            # --- Check if Book ID already exists ---
-            for book in books:
-                if book["bookid"] == bookID:
-                    print("❌ Book ID already exists. Please enter a different ID.")
-                    break
-            else:  # only runs if no duplicate found
-                break
+            if any(int(row["bookid"]) == bookID for row in books):
+                print("❌ Book ID exists.")
+                continue
+            break
         except ValueError:
-            print("❌ Invalid input. Please enter a number.")
-    title = input('Input the Book Title: ')
-    author = input('Input the Author: ')
-    category = input('Input the Category: ')
-    books.append({
+            print("❌ Invalid input.")
+    
+    title = input("Title: ")
+    author = input("Author: ")
+    category = input("Category: ").strip().lower()
+
+    new_book = {
         "bookid": bookID,
         "title": title,
         "author": author,
         "category": category,
-        "available": True
-    })
+        "available": "True"
+    }
 
+    append_csv(booksfile, new_book)
+
+    print(f"✅ Book '{title}' added successfully!")
+
+# ---------- Borrow Functions ----------
 def addBorrowedBooks():
-    bookID = int(input('Input the Book Id: '))
-    memberID = int(input('Input the Member Id: '))
-    borrowDate = input('Input the Borrow Date (YYYY-MM-DD): ')
-    returnDate = input('Input the Return Date (YYYY-MM-DD): ')
+    try:
+        bookID = int(input('Book ID: '))
+        memberID = int(input('Member ID: '))
+    except ValueError:
+        print("❌ Invalid input.")
+        return
 
-    # Check if book exists
+    while True:
+        borrow_date_input = input("Borrow Date (YYYY-MM-DD): ")
+        return_date_input = input("Return Date (YYYY-MM-DD): ")
+        try:
+            borrowDate = datetime.strptime(borrow_date_input, "%Y-%m-%d").date()
+            returnDate = datetime.strptime(return_date_input, "%Y-%m-%d").date()
+            if returnDate < borrowDate:
+                print("❌ Return date cannot be before borrow date.")
+                continue
+            break
+        except ValueError:
+            print("❌ Invalid date format. Please use YYYY-MM-DD.")
+
+    # Read members and books once
+    members = read_csv(memberfile)
+    books = read_csv(booksfile)
+
+    if not any(int(row["id"]) == memberID for row in members):
+        print("❌ Member not found.")
+        return
+
     for book in books:
-        if book["bookid"] == bookID:
-            if not book["available"]:
-                print("❌ This book is already borrowed.")
+        if int(book["bookid"]) == bookID:
+            if book["available"] != "True":
+                print("❌ Book already borrowed.")
                 return
-            # Mark as borrowed
-            book["available"] = False
-            borrowDetailed.append({
-                "bookid": bookID,
-                "memberid": memberID,
-                "borrowdate": borrowDate,
-                "returndate": returnDate
-            })
-            print("✅ Borrow record added. Book marked unavailable.")
-            return
+            book["available"] = "False"
+            break
+    else:
+        print("❌ Book ID not found.")
+        return
 
-    print("❌ Book ID not found.")
+    # Write back updated books
+    write_csv(booksfile, books, books[0].keys())
+    
+    # Write borrow record
+    borrow_record = {
+        "bookid": bookID,
+        "memberid": memberID,
+        "borrowdate": borrowDate.strftime("%Y-%m-%d"),
+        "returndate": returnDate.strftime("%Y-%m-%d")
+    }
+    
+    append_csv(borrowfile, borrow_record)
+
+    print("✅ Borrow record added.")
+    
     
 def returnBooks():
-    bookID = int(input('Input the Book Id: '))
+    try:
+        bookID = int(input('Book ID to return: '))
+    except ValueError:
+        print("❌ Invalid input.")
+        return
 
-    # Find borrow record
-    borrow_found = None
-    for borrow in borrowDetailed:
-        if borrow["bookid"] == bookID:
-            borrow_found = borrow
+    borrowed = list(csv.DictReader(open(borrowfile)))
+    books = list(csv.DictReader(open(booksfile)))
+    found = False
+
+    new_borrowed = []
+    for record in borrowed:
+        if int(record["bookid"]) == bookID:
+            found = True
+        else:
+            new_borrowed.append(record)
+
+    if not found:
+        print("❌ Borrow record not found.")
+        return
+
+    # Update borrow CSV
+    write_csv(borrowfile, new_borrowed, ['bookid', 'memberid', 'borrowdate', 'returndate'])
+
+    # Mark book available
+    for b in books:
+        if int(b["bookid"]) == bookID:
+            b["available"] = "True"
             break
+    write_csv(booksfile, books, books[0].keys()) 
+ 
+    print("✅ Book returned.")
 
-    if borrow_found is None:
-        print("❌ No borrow record found for this Book ID.")
-        return False
-
-    # Find the book and mark available
-    for book in books:
-        if book["bookid"] == bookID:
-            book["available"] = True  # ✅ always set to available when returning
-            break
-
-    # Remove borrow record
-    borrowDetailed.remove(borrow_found)
-    print(f"✅ Book ID {bookID} has been returned. Borrow record removed, book marked available.")
-    return True
-
-
-# ------------ Display Functions ------------
+# ---------- Display Functions ----------
 def getAllDetailed():
-    print("\n\nMembers Detailed")
-    if not members:
+    print("\n--- Members ---")
+    members = read_csv(memberfile)
+    if members:
+        print(tabulate(members, headers="keys", tablefmt="grid"))
+    else:
         print("No members found.")
+
+    print("\n--- Books ---")
+    books = read_csv(booksfile)
+    if books:
+        print(tabulate(books, headers="keys", tablefmt="grid"))
     else:
-        member_table = [[m["id"], m["firstName"], m["lastName"], m["contact"], m["dateOfBirth"], m["NationalId"]] for m in members]
-        print(tabulate(member_table, headers=["ID", "First Name", "Last Name", "Contact", "DOB", "National ID"], tablefmt="grid"))
+        print("No books found.")
 
-    print("\n\nBooks")
-    if not books:
-        print("No Books found.")
+    print("\n--- Borrowed ---")
+    borrowed = read_csv(borrowfile)
+    if borrowed:
+        print(tabulate(borrowed, headers="keys", tablefmt="grid"))
     else:
-        book_table = [[b["bookid"], b["title"], b["author"], b["category"], b["available"]] for b in books]
-        print(tabulate(book_table, headers=["Book ID", "Title", "Author", "Category", "Available"], tablefmt="grid"))
+        print("No borrowed records found.")
 
-    print("\n\nBorrowed Detailed")
-    if not borrowDetailed:
-        print("No Borrowed Records found.")
-    else:
-        borrow_table = [[bd["bookid"], bd["memberid"], bd["borrowdate"], bd["returndate"]] for bd in borrowDetailed]
-        print(tabulate(borrow_table, headers=["Book ID", "Member ID", "Borrow Date", "Return Date"], tablefmt="grid"))
-
-
-#--------Search Detailed
-def searchMemberById():
-    member_id = int(input('Input the id: '))
-    for member in members:
-        if member["id"] == member_id:
-            print(f"id:{member['id']} First Name:{member['firstName']} Last Name:{member['lastName']} Contact:{member['contact']} DOB:{member['dateOfBirth']} NationalId:{member['NationalId']}")
+# ---------- Search Functions ----------
+def searchCSV(file, key, value):
+    for row in read_csv(file):
+        if str(row[key]) == str(value):
+            print(tabulate([row.values()], headers=row.keys(), tablefmt="grid"))
             return
-    print("No member found!!!!")
+    print("❌ Not found.")
+
+def searchMemberById():
+    try:
+        id_val = int(input("Member ID: "))
+        searchCSV(memberfile, "id", id_val)
+    except ValueError:
+        print("❌ Invalid input.")
 
 def searchBookByID():
-    book_id = int(input('Input the id: '))
-    for book in books:
-        if book["bookid"] == book_id:
-            print(f"id:{book['bookid']} title:{book['title']} author:{book['author']} category:{book['category']} available:{book['available']}")
-            return
-    print("No book found!!!!")
+    try:
+        id_val = int(input("Book ID: "))
+        searchCSV(booksfile, "bookid", id_val)
+    except ValueError:
+        print("❌ Invalid input.")
+
+
 
 def searchBorrowDetailedById():
-    borrow_id = int(input('Input the id: '))
-    for borrow in borrowDetailed:
-        if borrow["bookid"] == borrow_id:
-            print(f"Book ID:{borrow['bookid']} Member ID:{borrow['memberid']} Borrow Date:{borrow['borrowdate']} Return Date:{borrow['returndate']}")
-            return
-    print("No borrow record found!!!!")
+    try:
+        id_val = int(input("Book ID: "))
+        searchCSV(borrowfile, "bookid", id_val)
+    except ValueError:
+        print("❌ Invalid input.")
 
-#--------Update Detailed
+def searchBookByCategory():
+    category_val = input("Enter category: ").strip().lower()
+    books = read_csv(booksfile)
+    found = False
+    for b in books:
+        if b["category"].lower() == category_val:
+            print(f"Book ID:{b['bookid']} Title:{b['title']} Author:{b['author']} Available:{b['available']}")
+            found = True
+    if not found:
+        print("❌ No books found in this category.")
+
+        
+# ----------- Update Functions (CSV-based) -----------
 def updateMemberById():
-    id_to_find = int(input('Enter the id of the member to update: '))
-    for member in members:
-        if member["id"] == id_to_find:
-            field = input('Enter the field to update (name, age, NationalId): ')
-            if field in member:
-                new_value = input(f'Enter new value for {field}: ')
-                if field == "age":
-                    new_value = int(new_value)
-                member[field] = new_value
-                print("Member record updated successfully.")
-                return True
-            else:
-                print("Invalid field.")
-                return False
-    print("Member not found.")
-    return False
+    members = read_csv(memberfile)
+    try:
+        id_to_find = int(input('Enter the ID of the member to update: '))
+    except ValueError:
+        print("❌ Invalid ID. Please enter a number.")
+        return
+
+    updated = False
+    for row in members:
+        if int(row["id"]) == id_to_find:
+            field = input('Enter the field to update (firstName, lastName, contact, dateOfBirth, NationalId): ').strip()
+            if field not in row:
+                print("❌ Invalid field.")
+                return
+            new_value = input(f'Enter new value for {field}: ').strip()
+            if field == "dateOfBirth":
+                try:
+                    # Validate and format date
+                    new_value = datetime.strptime(new_value, "%Y-%m-%d").date().strftime("%Y-%m-%d")
+                except ValueError:
+                    print("❌ Invalid date format. Use YYYY-MM-DD.")
+                    return
+            row[field] = new_value
+            updated = True
+            break
+
+    if updated:
+        write_csv(memberfile, members, members[0].keys())
+        print("✅ Member record updated successfully.")
+    else:
+        print("❌ Member not found.")
 
 def updateBookById():
-    id_to_find = int(input('Enter the id of the book to update: '))
-    for book in books:
-        if book["bookid"] == id_to_find:
-            field = input('Enter the field to update (name, available): ')
-            if field in book:
-                new_value = input(f'Enter new value for {field}: ')
-                if field == "available":
-                    new_value = int(new_value)
-                book[field] = new_value
-                print("Book record updated successfully.")
-                return True
-            else:
-                print("Invalid field.")
-                return False
-    print("Book not found.")
-    return False
+    books = read_csv(booksfile)  # fixed
+    try:
+        id_to_find = int(input('Enter the ID of the book to update: '))
+    except ValueError:
+        print("❌ Invalid ID. Please enter a number.")
+        return
 
+
+    updated = False
+    for row in books:
+        if int(row["bookid"]) == id_to_find:
+            field = input('Enter the field to update (title, author, category, available): ').strip()
+            if field not in row:
+                print("❌ Invalid field.")
+                return
+            new_value = input(f'Enter new value for {field}: ').strip()
+            
+            # Handle category and availability consistently
+            if field == "category":
+                new_value = new_value.lower()
+            elif field == "available":
+                if new_value.lower() in ["true", "1", "yes"]:
+                    new_value = "True"
+                elif new_value.lower() in ["false", "0", "no"]:
+                    new_value = "False"
+                else:
+                    print("❌ Invalid input for availability. Use True/False.")
+                    return
+
+            row[field] = new_value
+            updated = True
+            break
+
+    if updated:
+        with open(booksfile, 'w', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=['bookid', 'title', 'author', 'category', 'available'])
+            writer.writeheader()
+            writer.writerows(books)
+        print("✅ Book record updated successfully.")
+    else:
+        print("❌ Book not found.")
+        
 def updateBorrowedDetailedById():
-    id_to_find = int(input('Enter the id of the borrowed record to update: '))
-    for borrow in borrowDetailed:
-        if borrow["bookid"] == id_to_find:
+    records = read_csv(borrowfile)  
+    try:
+        id_to_find = int(input('Enter the Book ID of the borrowed record to update: '))
+    except ValueError:
+        print("❌ Invalid Book ID.")
+        return
+
+    updated = False
+    for row in records:
+        if int(row["bookid"]) == id_to_find:
             field = input('Enter the field to update (bookid, memberid, borrowdate, returndate): ')
-            if field in borrow:
-                new_value = input(f'Enter new value for {field}: ')
-                if field == "bookid":
+            if field not in row:
+                print("❌ Invalid field.")
+                return
+            new_value = input(f"Enter new value for {field}: ").strip()
+            if field in ["bookid", "memberid"]:
+                try:
                     new_value = int(new_value)
-                borrow[field] = new_value
-                print("Borrow record updated successfully.")
-                return True
-            else:
-                print("Invalid field.")
-                return False
-    print("Member not found.")
-    return False
+                except ValueError:
+                    print("❌ Must be a number.")
+                    return
+            elif field in ["borrowdate", "returndate"]:
+                try:
+                    new_value = datetime.strptime(new_value, "%Y-%m-%d").date().strftime("%Y-%m-%d")
+                except ValueError:
+                    print("❌ Invalid date format. Use YYYY-MM-DD.")
+                    return
+            row[field] = new_value
+            updated = True
+            break
 
-#--------Remove Detailed
+    if updated:
+        write_csv(borrowfile, records, records[0].keys())
+        print("✅ Borrowed record updated successfully.")
+    else:
+        print("❌ Borrowed record not found.")
+
+# ----------- Remove Functions (CSV-based) -----------
 def remove_member_by_id():
-    member_id = int(input('Input the id: '))
-    for i, member in enumerate(members):
-        if member["id"] == member_id:
-            del members[i]
-            print(f"Member with ID {member_id} has been removed.")
-            return True
-    print("Member not found.")
-    return False
+    reader= read_csv(memberfile)  
+    try:
+        member_id = int(input('Input the ID of the member to remove: '))
+    except ValueError:
+        print("❌ Invalid ID. Please enter a number.")
+        return
 
-def remove_member_by_id():
-    member_id = int(input('Input the id: '))
-    for i, member in enumerate(members):
-        if member["id"] == member_id:
-            del members[i]
-            print(f"Member with ID {member_id} has been removed.")
-            return True
-    print("Member not found.")
-    return False
+    removed = False
 
+
+    new_rows = [row for row in reader if int(row["id"]) != member_id]
+    if len(new_rows) < len(reader):
+        removed = True
+
+    if removed:
+        write_csv(memberfile, new_rows, reader[0].keys())
+        print(f"✅ Member with ID {member_id} has been removed.")
+    else:
+        print("❌ Member not found.")
 
 
 def remove_book_by_id():
-    book_id = int(input('Input the id: '))
-    for i, book in enumerate(books):
-        if book["bookid"] == book_id:
-            del books[i]
-            print(f"Book with ID {book_id} has been removed.")
-            return True
-    print("Book not found.")
-    return False
+    books = read_csv(booksfile)  # f
+    try:
+        book_id = int(input('Input the ID of the book to remove: '))
+    except ValueError:
+        print("❌ Invalid ID. Please enter a number.")
+        return
+
+    new_rows = [row for row in books if int(row["bookid"]) != book_id]
+    if len(new_rows) < len(books):
+        write_csv(booksfile, new_rows, books[0].keys())  # fixed
+        print(f"✅ Book with ID {book_id} has been removed.")
+    else:
+        print("❌ Book not found.")
+
+
 
 def remove_borrowdetailed_by_id():
-    borrow_id = int(input('Input the id: '))
-    for i, borrow in enumerate(borrowDetailed):
-        if borrow["bookid"] == borrow_id:
-            del borrowDetailed[i]
-            print(f"Borrow record with ID {borrow_id} has been removed.")
-            return True
-    print("Borrow record not found.")
-    return False
+    record = read_csv(borrowfile) 
+    try:
+        borrow_id = int(input('Input the Book ID of the borrow record to remove: '))
+    except ValueError:
+        print("❌ Invalid Book ID. Please enter a number.")
+        return
 
-#--------Save Detailed
-def save_members_to_csv(memberfile="members.csv"):
-    with open(memberfile, 'w', newline='') as csvfile:
-        fieldnames = ['id', 'firstName', 'lastName', 'contact', 'dateOfBirth', 'NationalId']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
-        for member in members:
-            writer.writerow(member)
-            
-def save_books_to_csv(bookfile="books.csv"):
-    with open(bookfile, 'w', newline='') as csvfile:
-        fieldnames = ['bookid', 'title', 'author', 'category', 'available']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
-        for book in books:
-            writer.writerow(book)
+    removed = False
 
-def save_borrowdetailed_to_csv(borrowfile="borrowdetailed.csv"):
-    with open(borrowfile, 'w', newline='') as csvfile:
-        fieldnames = ['bookid', 'memberid', 'borrowdate', 'returndate']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
-        for borrow in borrowDetailed:
-            writer.writerow(borrow)
+    new_rows = [row for row in record if int(row["bookid"]) != borrow_id]
+    if len(new_rows) < len(record):
+        write_csv(borrowfile, new_rows, record[0].keys())  # fixed
+        print(f"✅ Borrowed record with Book ID {borrow_id} has been removed.")
+    else:
+        print("❌ Borrowed record not found.")
+
+        
+def helpMenu():
+    print("""
+    =============================
+    📚 Library Management System
+    =============================
+    - Use option 1 to add members, books, or borrow/return records.
+    - Use option 2 to display all details.
+    - Use option 3 to search records by ID.
+    - Use option 4 to update records.
+    - Use option 5 to delete records.
+    - Use option 6 to save and exit.
+    - Use option 7 to logout.
+    """)
 
 # ------------ Main Menu ------------
 def main():
     while True:
-        print("\n--- Member Management Menu ---")
-        print("1. Add member/books/borrowed detailed/Returned book")
-        print("2. Get all details")
-        print("3. Search member/books/borrowed detailed by ID")
-        print("4. Update member/books/borrowed detailed")
-        print("5. Delete member/books/borrowed detailed")
-        print("6. Save and Exit")
+        helpMenu()
 
         try:
-            choice = int(input('Enter your choice (1-6): '))
+            choice = int(input('Enter your choice (1-7): '))
         except ValueError:
             print("Please enter a valid number.")
             continue
         if choice == 1:
-            print("    1. Add member")
-            print("    2. Add Books")
-            print("    3. Add BorrowedDetailed")
-            print("    4. Add Return book")
-            try:
-                choice = int(input('Enter your choice (1-4): '))
-            except ValueError:
-                print("Please enter a valid number.")
-                continue
-            if choice == 1:
-                addMembers()
-            elif choice == 2:
-                addBooks()
-            elif choice == 3:
-                addBorrowedBooks()
-            elif choice == 4:
-                returnBooks()
-            else:
-                print("❌ Invalid choice.")         
+            while True:
+                print("    1. Add Members")
+                print("    2. Add Books")
+                print("    3. Add Borrowed Books")
+                print("    4. Return Books")
+                print("    5. go to back to help menu")
+                try:
+                    submenu_choice = int(input('Enter your choice (1-5): '))
+                except ValueError:
+                    print("Please enter a valid number.")
+                    continue
+                if submenu_choice == 1:
+                    addMembers()
+                elif submenu_choice == 2:
+                    addBooks()
+                elif submenu_choice == 3:
+                    addBorrowedBooks()
+                elif submenu_choice == 4:
+                    returnBooks()
+                elif submenu_choice == 5:
+                    break
+                else:
+                    print("❌ Invalid choice.")
+                
+                
         elif choice == 2:
             getAllDetailed()
         elif choice == 3:
-            print("    1. Search member")
-            print("    2. Search Books")
-            print("    3. Search BorrowedDetailed")
-            try:
-                choice = int(input('Enter your choice (1-3): '))
-            except ValueError:
-                print("Please enter a valid number.")
-                continue
-            if choice == 1:
-                searchMemberById()
-            elif choice == 2:
-                searchBookByID()
-            elif choice == 3:
-                searchBorrowDetailedById()
-            else:
-                print("❌ Invalid choice.")
+            while True:                
+                print("    1. Search member by ID")
+                print("    2. Search Books by ID")
+                print("    3. Search Books by Category")
+                print("    4. Search BorrowedDetailed by Book ID")
+                print("    5. go to back to help menu")
+                try:
+                    submenu_choice = int(input('Enter your choice (1-4): '))
+                except ValueError:
+                    print("Please enter a valid number.")
+                    continue
+                if submenu_choice == 1:
+                    searchMemberById()
+                elif submenu_choice == 2:
+                    searchBookByID()
+                elif submenu_choice == 3:
+                    searchBookByCategory()                    
+                elif submenu_choice == 4:
+                    searchBorrowDetailedById()
+                elif submenu_choice == 5:
+                    break
+                else:
+                    print("❌ Invalid choice.")
+                
         elif choice == 4:
-            print("    1. Update member")
-            print("    2. Update Books")
-            print("    3. Update BorrowedDetailed")
-            try:
-                choice = int(input('Enter your choice (1-3): '))
-            except ValueError:
-                print("Please enter a valid number.")
-                continue
-            if choice == 1:
-                updateMemberById()
-            elif choice == 2:
-                updateBookById()
-            elif choice == 3:
-                updateBorrowedDetailedById()
-            else:
-                print("❌ Invalid choice.")
+            while True:
+                print("    1. Update member by ID")
+                print("    2. Update Books by ID")
+                print("    3. Update BorrowedDetailed by ID")
+                print("    4. go to back to help menu")
+                try:
+                    submenu_choice = int(input('Enter your choice (1-4): '))
+                except ValueError:
+                    print("Please enter a valid number.")
+                    continue
+                if submenu_choice == 1:
+                    updateMemberById()
+                elif submenu_choice == 2:
+                    updateBookById()
+                elif submenu_choice == 3:
+                    updateBorrowedDetailedById()
+                elif submenu_choice == 4:
+                    break
+                else:
+                    print("❌ Invalid choice.")
+            
         elif choice == 5:
-            print("    1. Delete member")
-            print("    2. Delete Books")
-            print("    3. Delete BorrowedDetailed")
-            try:
-                choice = int(input('Enter your choice (1-3): '))
-            except ValueError:
-                print("Please enter a valid number.")
-                continue
-            if choice == 1:
-                remove_member_by_id()
-            elif choice == 2:
-                remove_book_by_id()
-            elif choice == 3:
-                remove_borrowdetailed_by_id()
-            else:
-                print("❌ Invalid choice.")
+            while True:
+                print("    1. Delete member")
+                print("    2. Delete Books")
+                print("    3. Delete BorrowedDetailed")
+                print("    4. go to back to help menu")
+                try:
+                    submenu_choice = int(input('Enter your choice (1-4): '))
+                except ValueError:
+                    print("Please enter a valid number.")
+                    continue
+                if submenu_choice == 1:
+                    remove_member_by_id()
+                elif submenu_choice == 2:
+                    remove_book_by_id()
+                elif submenu_choice == 3:
+                    remove_borrowdetailed_by_id()
+                elif submenu_choice == 4:
+                    break
+                else:
+                    print("❌ Invalid choice.")
         elif choice == 6:
-            save_members_to_csv()
-            save_books_to_csv()
-            save_borrowdetailed_to_csv()
             print("Thank you! Exiting...")
             break
+        elif choice == 7:
+
+            print("🔒 Logging out...\n")
+            break  # go back to login
         else:
-            print("Invalid choice. Please enter a number between 1 and 6.")
+            print("Invalid choice. Please enter a number between 1 and 7.")
 
 
 username = 'admin1234'
 password = "1234"
+def login():
+    print("================================")
+    print("   📚 Library Management System ")
+    print("            Login Page")
+    print("================================")
+    while True:
+        enterName = input("🙍 Enter username: ")
+        enterPassword = input("🔒 Enter password: ")
+        if enterName == username and enterPassword == password:
+            print("👍 Login successful.")
+            main()
+            return True
+        else:
+            print("❌ Username or password is incorrect")
 
 
-# while True:
-#     enterName = input("Enter username: ")
-#     enterPassword = input("Enter password: ")
+login()
 
-#     if enterName == username and enterPassword == password:
-        
-#         break
-#     else:
-#         print("Username or password is incorrect")
 
-        
-main()
+
     
 
     

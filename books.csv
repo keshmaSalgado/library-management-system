@@ -1,2 +1,3 @@
 bookid,title,author,category,available
-1,game of thrones,George R R martin,Fun,True
+1,Game of thrones,George R.R Martin,good,False
+2,harry potter,J.K.Rowling,fantasy,True
