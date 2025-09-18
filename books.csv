@@ -1,3 +1,5 @@
 bookid,title,author,category,available
-1,Game of thrones,George R.R Martin,good,False
-2,harry potter,J.K.Rowling,fantasy,True
+1,harry potter,J.K.Rowling,fantasy,False
+2,Game of thrones,george.r.r.martin,fantasy,True
+3,python basics,samson,programming,True
+102,harry potter,J.k.Rowling,fantasy,True

@@ -4,10 +4,17 @@ from tabulate import tabulate
 from datetime import datetime
 
 
+MEMBER_HEADERS = ['id', 'firstName', 'lastName', 'contact', 'dateOfBirth', 'NationalId']
+BOOK_HEADERS   = ['bookid', 'title', 'author', 'category', 'available']
+BORROW_HEADERS = ['bookid', 'memberid', 'borrowdate', 'returndate']
+USER_HEADERS  = ['username', 'password']
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 memberfile = os.path.join(BASE_DIR, "members.csv")
 booksfile = os.path.join(BASE_DIR, "books.csv")
 borrowfile = os.path.join(BASE_DIR, "borrowdetailed.csv")
+users_file = os.path.join(BASE_DIR, "users.csv")
+
 
 # ---------- CSV Initialization ----------
 def init_csv(file, headers):
@@ -16,12 +23,25 @@ def init_csv(file, headers):
             writer = csv.DictWriter(csvfile, fieldnames=headers)
             writer.writeheader()
         print(f"File '{file}' created with headers.")
+        
+init_csv(memberfile, MEMBER_HEADERS)
+init_csv(booksfile, BOOK_HEADERS)
+init_csv(borrowfile, BORROW_HEADERS)
+        
+def init_users(file, headers):
+    """Initialize users.csv with default admin account if not exists."""
+    if not os.path.exists(file):
+        with open(file, mode='w', newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=headers)
+            writer.writeheader()
+            # Default admin user
+            writer.writerow({"username": "admin1234", "password": "1234"})
+        print(f"File '{file}' created with default admin user.")
 
-init_csv(memberfile, ['id', 'firstName', 'lastName', 'contact', 'dateOfBirth', 'NationalId'])
-init_csv(booksfile, ['bookid', 'title', 'author', 'category', 'available'])
-init_csv(borrowfile, ['bookid', 'memberid', 'borrowdate', 'returndate'])
 
+init_users(users_file, USER_HEADERS)
 
+    
 # ---------- CSV Utility Functions ----------
 def read_csv(file):
     with open(file, newline='') as f:
@@ -42,8 +62,6 @@ def append_csv(file, row):
 def addMembers():
     # Read members once
     members = read_csv(memberfile)
-
-
     while True:
         try:
             memberID = int(input("Input the Id: "))
@@ -123,7 +141,6 @@ def addBorrowedBooks():
     except ValueError:
         print("❌ Invalid input.")
         return
-
     while True:
         borrow_date_input = input("Borrow Date (YYYY-MM-DD): ")
         return_date_input = input("Return Date (YYYY-MM-DD): ")
@@ -136,7 +153,6 @@ def addBorrowedBooks():
             break
         except ValueError:
             print("❌ Invalid date format. Please use YYYY-MM-DD.")
-
     # Read members and books once
     members = read_csv(memberfile)
     books = read_csv(booksfile)
@@ -144,7 +160,6 @@ def addBorrowedBooks():
     if not any(int(row["id"]) == memberID for row in members):
         print("❌ Member not found.")
         return
-
     for book in books:
         if int(book["bookid"]) == bookID:
             if book["available"] != "True":
@@ -155,9 +170,8 @@ def addBorrowedBooks():
     else:
         print("❌ Book ID not found.")
         return
-
     # Write back updated books
-    write_csv(booksfile, books, books[0].keys())
+    write_csv(booksfile, books, BOOK_HEADERS)
     
     # Write borrow record
     borrow_record = {
@@ -166,9 +180,7 @@ def addBorrowedBooks():
         "borrowdate": borrowDate.strftime("%Y-%m-%d"),
         "returndate": returnDate.strftime("%Y-%m-%d")
     }
-    
     append_csv(borrowfile, borrow_record)
-
     print("✅ Borrow record added.")
     
     
@@ -195,39 +207,49 @@ def returnBooks():
         return
 
     # Update borrow CSV
-    write_csv(borrowfile, new_borrowed, ['bookid', 'memberid', 'borrowdate', 'returndate'])
+    write_csv(borrowfile, new_borrowed, BORROW_HEADERS)
 
     # Mark book available
     for b in books:
         if int(b["bookid"]) == bookID:
             b["available"] = "True"
             break
-    write_csv(booksfile, books, books[0].keys()) 
+    write_csv(booksfile, books, BOOK_HEADERS) 
  
     print("✅ Book returned.")
 
 # ---------- Display Functions ----------
-def getAllDetailed():
+
+def getAllMembers():
     print("\n--- Members ---")
     members = read_csv(memberfile)
     if members:
         print(tabulate(members, headers="keys", tablefmt="grid"))
     else:
         print("No members found.")
-
+        
+def getAllBooks():
     print("\n--- Books ---")
     books = read_csv(booksfile)
     if books:
         print(tabulate(books, headers="keys", tablefmt="grid"))
     else:
         print("No books found.")
-
+        
+def getAllBorrowedDetailed():
     print("\n--- Borrowed ---")
     borrowed = read_csv(borrowfile)
     if borrowed:
         print(tabulate(borrowed, headers="keys", tablefmt="grid"))
     else:
         print("No borrowed records found.")
+        
+        
+def getAllDetailed():
+    getAllMembers()
+    getAllBooks()
+    getAllBorrowedDetailed()
+    
 
 # ---------- Search Functions ----------
 def searchCSV(file, key, value):
@@ -251,8 +273,6 @@ def searchBookByID():
     except ValueError:
         print("❌ Invalid input.")
 
-
-
 def searchBorrowDetailedById():
     try:
         id_val = int(input("Book ID: "))
@@ -270,6 +290,20 @@ def searchBookByCategory():
             found = True
     if not found:
         print("❌ No books found in this category.")
+        
+def searchBookByAvailability():
+    availability = input("Availability (True/False): ").strip().capitalize()
+    if availability not in ["True", "False"]:
+        print("❌ Invalid input. Use True or False.")
+        return
+
+    found = False
+    for row in read_csv(booksfile):
+        if row["available"] == availability:
+            print(tabulate([row.values()], headers=row.keys(), tablefmt="grid"))
+            found = True
+    if not found:
+        print("❌ No books found with availability =", availability)
 
         
 # ----------- Update Functions (CSV-based) -----------
@@ -301,20 +335,18 @@ def updateMemberById():
             break
 
     if updated:
-        write_csv(memberfile, members, members[0].keys())
+        write_csv(memberfile, members, MEMBER_HEADERS)
         print("✅ Member record updated successfully.")
     else:
         print("❌ Member not found.")
 
 def updateBookById():
-    books = read_csv(booksfile)  # fixed
+    books = read_csv(booksfile)  
     try:
         id_to_find = int(input('Enter the ID of the book to update: '))
     except ValueError:
         print("❌ Invalid ID. Please enter a number.")
         return
-
-
     updated = False
     for row in books:
         if int(row["bookid"]) == id_to_find:
@@ -342,7 +374,7 @@ def updateBookById():
 
     if updated:
         with open(booksfile, 'w', newline='') as f:
-            writer = csv.DictWriter(f, fieldnames=['bookid', 'title', 'author', 'category', 'available'])
+            writer = csv.DictWriter(f, fieldnames=BOOK_HEADERS)
             writer.writeheader()
             writer.writerows(books)
         print("✅ Book record updated successfully.")
@@ -382,7 +414,7 @@ def updateBorrowedDetailedById():
             break
 
     if updated:
-        write_csv(borrowfile, records, records[0].keys())
+        write_csv(borrowfile, records, BORROW_HEADERS)
         print("✅ Borrowed record updated successfully.")
     else:
         print("❌ Borrowed record not found.")
@@ -397,21 +429,19 @@ def remove_member_by_id():
         return
 
     removed = False
-
-
     new_rows = [row for row in reader if int(row["id"]) != member_id]
     if len(new_rows) < len(reader):
         removed = True
 
     if removed:
-        write_csv(memberfile, new_rows, reader[0].keys())
+        write_csv(memberfile, new_rows,MEMBER_HEADERS)
         print(f"✅ Member with ID {member_id} has been removed.")
     else:
         print("❌ Member not found.")
 
 
 def remove_book_by_id():
-    books = read_csv(booksfile)  # f
+    books = read_csv(booksfile)  
     try:
         book_id = int(input('Input the ID of the book to remove: '))
     except ValueError:
@@ -420,7 +450,7 @@ def remove_book_by_id():
 
     new_rows = [row for row in books if int(row["bookid"]) != book_id]
     if len(new_rows) < len(books):
-        write_csv(booksfile, new_rows, books[0].keys())  # fixed
+        write_csv(booksfile, new_rows, BOOK_HEADERS)  
         print(f"✅ Book with ID {book_id} has been removed.")
     else:
         print("❌ Book not found.")
@@ -439,7 +469,7 @@ def remove_borrowdetailed_by_id():
 
     new_rows = [row for row in record if int(row["bookid"]) != borrow_id]
     if len(new_rows) < len(record):
-        write_csv(borrowfile, new_rows, record[0].keys())  # fixed
+        write_csv(borrowfile, new_rows, BORROW_HEADERS)  
         print(f"✅ Borrowed record with Book ID {borrow_id} has been removed.")
     else:
         print("❌ Borrowed record not found.")
@@ -451,21 +481,31 @@ def helpMenu():
     📚 Library Management System
     =============================
     - Use option 1 to add members, books, or borrow/return records.
-    - Use option 2 to display all details.
+    - Use option 2 to display members, books, or borrow/return details.
     - Use option 3 to search records by ID.
     - Use option 4 to update records.
     - Use option 5 to delete records.
-    - Use option 6 to save and exit.
-    - Use option 7 to logout.
+    - Use option 6 to log out and exit.
     """)
+    
+    
+def clear_console():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+def pause_and_clear():
+    input("\n🔹 Press Enter/Space to continue...")
+    clear_console()
+
 
 # ------------ Main Menu ------------
 def main():
     while True:
-        helpMenu()
+        pause_and_clear()
 
+        helpMenu()
+        
         try:
-            choice = int(input('Enter your choice (1-7): '))
+            choice = int(input('Enter your choice (1-6): '))
         except ValueError:
             print("Please enter a valid number.")
             continue
@@ -496,16 +536,39 @@ def main():
                 
                 
         elif choice == 2:
-            getAllDetailed()
+            while True:
+                print("    1. Display All Members")
+                print("    2. Display All Books")
+                print("    3. Display All Borrowed Detailed")
+                print("    4. Display All Details")
+                print("    5. go to back to help menu")
+                try:
+                    submenu_choice = int(input('Enter your choice (1-5): '))
+                except ValueError:
+                    print("Please enter a valid number.")
+                    continue
+                if submenu_choice == 1:
+                    getAllMembers()
+                elif submenu_choice == 2:
+                    getAllBooks()
+                elif submenu_choice == 3:
+                    getAllBorrowedDetailed()
+                elif submenu_choice == 4:
+                    getAllDetailed()
+                elif submenu_choice == 5:
+                    break
+                else:
+                    print("❌ Invalid choice.")           
         elif choice == 3:
             while True:                
                 print("    1. Search member by ID")
                 print("    2. Search Books by ID")
                 print("    3. Search Books by Category")
                 print("    4. Search BorrowedDetailed by Book ID")
-                print("    5. go to back to help menu")
+                print("    5. Search Book by Availability")
+                print("    6. go to back to help menu")
                 try:
-                    submenu_choice = int(input('Enter your choice (1-4): '))
+                    submenu_choice = int(input('Enter your choice (1-6): '))
                 except ValueError:
                     print("Please enter a valid number.")
                     continue
@@ -518,9 +581,12 @@ def main():
                 elif submenu_choice == 4:
                     searchBorrowDetailedById()
                 elif submenu_choice == 5:
+                    searchBookByAvailability()                    
+                elif submenu_choice == 6:
                     break
                 else:
                     print("❌ Invalid choice.")
+                    
                 
         elif choice == 4:
             while True:
@@ -565,35 +631,131 @@ def main():
                     break
                 else:
                     print("❌ Invalid choice.")
+                    
         elif choice == 6:
-            print("Thank you! Exiting...")
+            print("Good Bye 👋Exiting...")
+            pause_and_clear() 
             break
-        elif choice == 7:
-
-            print("🔒 Logging out...\n")
-            break  # go back to login
         else:
             print("Invalid choice. Please enter a number between 1 and 7.")
 
 
-username = 'admin1234'
-password = "1234"
-def login():
-    print("================================")
-    print("   📚 Library Management System ")
-    print("            Login Page")
-    print("================================")
+
+def member_login():
+    """Allow library members to log in using ID and first name."""
     while True:
-        enterName = input("🙍 Enter username: ")
-        enterPassword = input("🔒 Enter password: ")
-        if enterName == username and enterPassword == password:
-            print("👍 Login successful.")
-            main()
-            return True
+        clear_console()
+        print("================================")
+        print("   📚 Library Management System ")
+        print("         Member Access")
+        print("================================")
+        
+        
+        try:
+            member_id = int(input("Enter your Member ID: ").strip())
+        except ValueError:
+            print("❌ Member ID must be a number.")
+            input("Press Enter to try again...")
+            continue
+
+        first_name = input("Enter your First Name: ").strip()
+
+        members = read_csv(memberfile)
+        for member in members:
+            if int(member["id"]) == member_id and member["firstName"].lower() == first_name.lower():
+                print(f"👍 Welcome {member['firstName']}!")
+                input("Press Enter to continue...")
+                return member  # Return the member dict for reference
+
+        print("❌ Member not found. Please check your ID and first name.")
+        choice = input("Do you want to try again? (y/n): ").strip().lower()
+        if choice == "n":  # 👈 Go back to main login
+            print("⬅️ Returning to main login menu...")
+            input("Press Enter to continue...")
+            return None
+        
+    
+            
+def admin_login():
+    """Allow admin users to log in using username and password."""
+    while True:
+        print("================================")
+        print("   📚 Library Management System ")
+        print("            Login Page")
+        print("================================")
+        enterName = input("🙍 Enter username: ").strip()
+        enterPassword = input("🔒 Enter password: ").strip()
+        
+        # Read users from CSV
+        with open(users_file, newline='') as f:
+            users = list(csv.DictReader(f))
+        
+        # Match credentials
+        for user in users:
+            if user["username"] == enterName and user["password"] == enterPassword:
+                print("👍 Login successful.")
+                pause_and_clear()
+                main()  # 🚀 Your main menu
+                return True
+        
+        print("❌ Username or password is incorrect")
+        pause_and_clear()   
+
+def member_menu(member):
+    """Menu for logged-in members to search books."""
+    while True:
+        clear_console()
+        print('========================================================================')
+        print(f"📚 Library System - Member: {member['firstName']} (ID: {member['id']})")
+        print('========================================================================')
+        print("1. Search book by ID")
+        print("2. Search book by Category")
+        print("3. Search book by Availability")
+        print("4. Back to main login menu")
+        
+        choice = input("Enter your choice (1-4): ").strip()
+        
+        if choice == "1":
+            searchBookByID()
+            input("Press Enter to continue...")
+        elif choice == "2":
+            searchBookByCategory()
+            input("Press Enter to continue...")
+        elif choice == "3":
+            searchBookByAvailability()
+            input("Press Enter to continue...")
+        elif choice == "4":
+            break
         else:
-            print("❌ Username or password is incorrect")
-
-
+            print("❌ Invalid choice.")
+            input("Press Enter to continue...")
+            
+def login():
+    while True:
+        clear_console()
+        print("================================")
+        print("   📚 Library Management System ")
+        print("            Login Page")
+        print("================================")
+        print("1. Admin login")
+        print("2. Member login (basic access)")
+        print("3. Exit")
+        
+        choice = input("Enter your choice (1-3): ").strip()
+        
+        if choice == "1":
+            admin_login()  # Your existing admin login logic
+        elif choice == "2":
+            member = member_login()
+            if member:
+                member_menu(member)
+        elif choice == "3":
+            print("Good Bye 👋Exiting...")
+            break
+        else:
+            print("❌ Invalid choice.")
+            input("Press Enter to continue...")
+            
 login()
 
 
